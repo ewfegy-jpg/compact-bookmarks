@@ -1,0 +1,18 @@
+{
+    "id": "better-bookmarks",
+    "name": "Better bookmarks panel",
+    "description": "Better bookmarks for Zen Browser",
+    "scripts": {
+        "better-bookmarks.uc.js": {
+            "include": [
+                "chrome://browser/content/browser.xhtml"
+            ]
+        }
+    },
+  
+    "style": {
+        "chrome": "userChrome.css"
+    },
+
+
+}
