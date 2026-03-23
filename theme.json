@@ -1,18 +1,25 @@
 {
-    "id": "better-bookmarks",
-    "name": "Better bookmarks panel",
-    "description": "Better bookmarks for Zen Browser",
-    "scripts": {
-        "betterBookmarks.uc.js": {
-            "include": [
-                "chrome://browser/content/browser.xhtml"
-            ]
-        }
-    },
-  
-    "style": {
-        "chrome": "userChrome.css"
-    },
-
-
+  "id": "bookmark-context-icon",
+  "name": "Bookmark Context Icon",
+  "description": "Adds a 'Change Bookmark Icon' item to the bookmark context menu",
+  "scripts": {
+    "change-bookmark-icon.uc.js": {
+      "include": [
+        "chrome://browser/content/browser.xhtml"
+      ]
+    }
+  },
+  "homepage": "https://github.com/ewfegy-jpg/better-bookmarks",
+  "style": {
+    "chrome": "userChrome.css"
+  },
+  "author": "Ewfegy",
+  "version": "1.0.0",
+  "tags": [
+    "Zen Browser",
+    "Bookmarks",
+    "Context Menu"
+  ],
+  "createdAt": "2026-03-23",
+  "updatedAt": "2026-03-23"
 }
