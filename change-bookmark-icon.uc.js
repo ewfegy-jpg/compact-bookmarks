@@ -2,12 +2,10 @@ setTimeout(() => {
   const menu = document.getElementById("placesContext");
   if (!menu || menu.querySelector("#change-bookmark-icon")) return;
 
-  // Create XUL menu item using a fragment
   const fragment = window.MozXULElement.parseXULToFragment(`
     <menuitem id="change-bookmark-icon" label="Change Bookmark Icon…"/>
   `);
 
-  // Insert before "Delete Bookmark" if it exists, otherwise append
   const deleteItem = menu.querySelector("#placesContext_deleteBookmark");
   if (deleteItem) {
     deleteItem.before(fragment);
@@ -15,181 +13,103 @@ setTimeout(() => {
     menu.appendChild(fragment);
   }
 
-  // Add a single command listener for the menu
-  menu.addEventListener("command", (event) => {
-    if (event.target.id !== "change-bookmark-icon") return;
-
-    const triggerNode = menu.triggerNode;
-    if (!triggerNode || !triggerNode.classList.contains("bookmark-item")) {
-      console.error("No bookmark trigger node found");
-      return;
+  // ---- STORAGE ----
+  function getSavedIcons() {
+    try {
+      return JSON.parse(
+        SessionStore.getCustomWindowValue(window, "bookmarkIcons") || "{}"
+      );
+    } catch {
+      return {};
     }
-
-    console.log("Clicked bookmark:", triggerNode.getAttribute("label"));
-    alert("Change icon for: " + triggerNode.getAttribute("label"));
-    // Your icon logic goes here
-  });
-}, 500); // adjust timeout if needed// ==UserScript==
-// @name           Bookmark Icons (Zen-style)
-// @ignorecache
-// ==/UserScript==
-
-class BookmarkIcons {
-  constructor() {
-    this.init();
   }
 
-  async init() {
-    await this.waitForElm("#placesContext");
-
-    this.addContextMenuItem();
-    this.applySavedIcons();
-    this.observeBookmarks();
+  function saveIcons(data) {
+    SessionStore.setCustomWindowValue(
+      window,
+      "bookmarkIcons",
+      JSON.stringify(data)
+    );
   }
 
-  waitForElm(selector) {
-    return new Promise(resolve => {
-      const el = document.querySelector(selector);
-      if (el) return resolve(el);
+function applyIcon(node, iconUrl) {
+  if (!node) return;
 
-      const observer = new MutationObserver(() => {
-        const el = document.querySelector(selector);
-        if (el) {
-          observer.disconnect();
-          resolve(el);
-        }
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true
-      });
-    });
+  if (node.getAttribute("container") === "true") {
+    // Folder
+    node.style.setProperty(
+      "list-style-image",
+      `url("${iconUrl}")`,
+      "important"
+    );
+  } else {
+    // Bookmark
+    node.setAttribute("image", iconUrl);
   }
+}
+  // ---- APPLY SAVED ICONS ON LOAD ----
+  function applySavedIcons() {
+    const icons = getSavedIcons();
 
-  // =========================
-  // Context menu
-  // =========================
-
-  addContextMenuItem() {
-    const menu = document.getElementById("placesContext");
-    if (!menu || menu.querySelector(".change-bookmark-icon")) return;
-
-    const frag = MozXULElement.parseXULToFragment(`
-      <menuitem class="change-bookmark-icon" label="Change Icon"/>
-    `);
-
-    menu.appendChild(frag);
-
-    menu.addEventListener("command", async (e) => {
-      if (!e.target.classList.contains("change-bookmark-icon")) return;
-
-      const node = document.popupNode;
-      if (!node) return;
-
-      const guid = node._placesNode?.bookmarkGuid;
-      if (!guid) return;
-
-      const icon = await gZenEmojiPicker.open(node, {
-        onlySvgIcons: true
-      });
-
-      if (icon) {
-        this.saveIcon(guid, icon);
-        this.applyIconToNode(node, icon);
-      } else {
-        this.removeIcon(guid);
+    document.querySelectorAll(".bookmark-item").forEach((node) => {
+      const id = node._placesNode?.bookmarkGuid || node._placesNode?.guid;
+      if (id && icons[id]) {
+        applyIcon(node, icons[id]);
       }
     });
   }
 
-  // =========================
-  // Storage
-  // =========================
+  // Initial apply
+  setTimeout(applySavedIcons, 1000);
 
-  get savedIcons() {
-    const data = SessionStore.getCustomWindowValue(window, "bookmarkIcons");
-    return data ? JSON.parse(data) : {};
-  }
+  // Reapply when UI changes
+  const observer = new MutationObserver(() => {
+    applySavedIcons();
+  });
 
-  set savedIcons(val) {
-    SessionStore.setCustomWindowValue(
-      window,
-      "bookmarkIcons",
-      JSON.stringify(val)
-    );
-  }
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
 
-  saveIcon(guid, icon) {
-    const icons = this.savedIcons;
-    icons[guid] = icon;
-    this.savedIcons = icons;
-  }
+  // ---- CONTEXT MENU ACTION ----
+  menu.addEventListener("command", async (event) => {
+    if (event.target.id !== "change-bookmark-icon") return;
 
-  removeIcon(guid) {
-    const icons = this.savedIcons;
-    delete icons[guid];
-    this.savedIcons = icons;
-  }
-
-  // =========================
-  // Apply icons
-  // =========================
-
-  applySavedIcons() {
-    setTimeout(() => {
-      document.querySelectorAll("[places-node]").forEach(node => {
-        const guid = node._placesNode?.bookmarkGuid;
-        if (!guid) return;
-
-        const icon = this.savedIcons[guid];
-        if (icon) {
-          this.applyIconToNode(node, icon);
-        }
-      });
-    }, 1000);
-  }
-
-  applyIconToNode(node, iconUrl) {
-    let iconBox = node.querySelector(".bookmark-custom-icon");
-
-    if (!iconBox) {
-      iconBox = document.createElement("span");
-      iconBox.className = "bookmark-custom-icon";
-
-      node.prepend(iconBox);
+    const triggerNode = menu.triggerNode;
+    if (!triggerNode || !triggerNode.classList.contains("bookmark-item")) {
+      console.error("No bookmark node");
+      return;
     }
 
-    iconBox.innerHTML = "";
-
-    if (iconUrl.endsWith(".svg")) {
-      const img = document.createElement("img");
-      img.src = iconUrl;
-      iconBox.appendChild(img);
-    } else {
-      iconBox.textContent = iconUrl;
+    if (!window.gZenEmojiPicker) {
+      alert("Zen icon picker not available");
+      return;
     }
-  }
 
-  // =========================
-  // Observer
-  // =========================
-
-  observeBookmarks() {
-    const observer = new MutationObserver(() => {
-      this.applySavedIcons();
+    const iconUrl = await window.gZenEmojiPicker.open(triggerNode, {
+      onlySvgIcons: true,
     });
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-}
+    if (!iconUrl) return;
 
-// init
-(function () {
-  if (!globalThis.bookmarkIcons) {
-    globalThis.bookmarkIcons = new BookmarkIcons();
-  }
-})();
+    const id =
+      triggerNode._placesNode?.bookmarkGuid ||
+      triggerNode._placesNode?.guid;
+
+    if (!id) {
+      console.error("No bookmark ID");
+      return;
+    }
+
+    // Apply instantly
+    applyIcon(triggerNode, iconUrl);
+
+    // Save
+    const icons = getSavedIcons();
+    icons[id] = iconUrl;
+    saveIcons(icons);
+
+    console.log("Saved icon for", id, iconUrl);
+  });
+}, 500);
