@@ -1,3 +1,31 @@
+(function() {
+  const wrapper = document.getElementById("zen-main-app-wrapper");
+  const toolbox = document.getElementById("navigator-toolbox");
+  const bookmarks = document.getElementById("PersonalToolbar");
+
+  if (!wrapper || !toolbox || !bookmarks) return;
+
+  function moveBookmarks() {
+    const compact = wrapper.getAttribute("zen-compact-mode") === "true";
+
+    if (compact) {
+      const titlebar = document.getElementById("titlebar");
+      if (titlebar && bookmarks.parentNode !== titlebar) {
+        titlebar.appendChild(bookmarks);
+      }
+    } else {
+      if (toolbox.firstChild !== bookmarks) {
+        toolbox.insertBefore(bookmarks, toolbox.firstChild);
+      }
+    }
+  }
+
+  moveBookmarks();
+
+  const wrapperObserver = new MutationObserver(moveBookmarks);
+  wrapperObserver.observe(wrapper, { attributes: true, attributeFilter: ["zen-compact-mode"] });
+})();
+
 setTimeout(() => {
   const menu = document.getElementById("placesContext");
   if (!menu || menu.querySelector("#change-bookmark-icon")) return;
@@ -70,6 +98,7 @@ setTimeout(() => {
         const uri = node._placesNode?.uri || "";
         if (uri) node.setAttribute("image", `page-icon:${uri}`);
         else node.removeAttribute("image");
+        node.style.removeProperty("background-image");
       }
       return;
     }
@@ -81,10 +110,13 @@ setTimeout(() => {
     }
 
     if (isFolder) {
-      // Instead of list-style-image, store in CSS variable
       node.style.setProperty("--bookmark-item-icon", `url("${finalUrl}")`);
     } else {
       node.setAttribute("image", finalUrl);
+      node.style.setProperty("background-image", `url("${finalUrl}")`);
+      node.style.setProperty("background-size", "16px 16px !important");
+      node.style.setProperty("background-repeat", "no-repeat");
+      node.style.setProperty("background-position", "center");
     }
   }
 
@@ -99,15 +131,15 @@ setTimeout(() => {
 
   setTimeout(applySavedIcons, 1000);
 
-  // Reapply when DOM changes (new bookmarks, moved folders)
-  const observer = new MutationObserver(() => {
+  // Reapply when DOM changes
+  const iconObserver = new MutationObserver(() => {
     const icons = getSavedIcons();
     document.querySelectorAll(".bookmark-item").forEach(node => {
       const id = node._placesNode?.bookmarkGuid || node._placesNode?.guid;
       if (id && icons[id]) applyIcon(node, icons[id]);
     });
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  iconObserver.observe(document.body, { childList: true, subtree: true });
 
   // ---- CONTEXT MENU HANDLER ----
   menu.addEventListener("command", async (event) => {
