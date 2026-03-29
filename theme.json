@@ -1,9 +1,9 @@
 {
-  "id": "bookmark-context-icon",
-  "name": "Bookmark Context Icon",
-  "description": "Adds a 'Change Bookmark Icon' item to the bookmark context menu",
+  "id": "compact-bookmarks",
+  "name": "Compact bookmarks with custom icons",
+  "description": "Moves bookmarks bar into side panel and adds ability to change icons for folders and regular bookmarks",
   "scripts": {
-    "change-bookmark-icon.uc.js": {
+    "compact-bookmarks-with-custom-icons.uc.js": {
       "include": [
         "chrome://browser/content/browser.xhtml"
       ]
