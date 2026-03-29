@@ -64,16 +64,17 @@ setTimeout(() => {
   console.log("Bookmark 'Change Icon' menu item inserted correctly");
 
   // ---- STORAGE HELPERS ----
-  function getSavedIcons() {
-    try {
-      return JSON.parse(SessionStore.getCustomWindowValue(window, "bookmarkIcons") || "{}");
-    } catch {
-      return {};
-    }
+   function getSavedIcons() {
+     try {
+       return JSON.parse(Services.prefs.getStringPref("zen.bookmarkIcons", "{}"));
+       } catch {
+    return {};
   }
-  function saveIcons(data) {
-    SessionStore.setCustomWindowValue(window, "bookmarkIcons", JSON.stringify(data));
-  }
+}
+
+function saveIcons(data) {
+  Services.prefs.setStringPref("zen.bookmarkIcons", JSON.stringify(data));
+}
 
   // ---- EMOJI -> DATA URL ----
   function emojiToSvgDataUrl(emoji) {
